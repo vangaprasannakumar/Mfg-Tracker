@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Capacitor Manufacturing Tracker</title>
 <meta name="theme-color" content="#f8fafc" id="metaThemeColor">
-<meta name="app-version" content="0.1.0-phase0">
+<meta name="app-version" content="0.2.0-phase1">
 <link rel="manifest" href="./manifest.json">
 <link rel="icon" href="https://i.postimg.cc/HxdkG3R1/CALGAS-CAPACITORS-LOGO-192x192.jpg">
 <link rel="apple-touch-icon" href="https://i.postimg.cc/76wZvXdD/CALGAS-CAPACITORS-LOGO-512x512.jpg">
@@ -13,16 +13,16 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-  /* Same token set as the Stock Management app on purpose — this is a
-     sibling tool, sharing login with it, and should read as one product
-     family rather than a visually unrelated app. */
+  /* Same token set as the Stock Management app on purpose — sibling tool,
+     shared login, should read as one product family. */
   :root {
     --paper: #f8fafc; --panel: #ffffff;
     --ink: #0f172a; --ink-soft: #475569; --ink-faint: #94a3b8;
     --line: #e2e8f0; --line-soft: #f1f5f9;
-    --blue: #3b82f6; --blue-deep: #1d4ed8;
+    --blue: #3b82f6; --blue-deep: #1d4ed8; --blue-soft: #eff6ff;
     --copper: #f59e0b;
     --critical: #ef4444; --critical-soft: #fef2f2;
+    --ok: #10b981;
     --radius: 16px; --radius-sm: 10px;
     --shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
     --shadow-lift: 0 12px 24px -6px rgba(15, 23, 42, 0.12), 0 4px 10px -4px rgba(15, 23, 42, 0.08);
@@ -36,36 +36,66 @@
     --line: #1e293b; --line-soft: #172033;
   }
   * { box-sizing: border-box; }
-  body { margin: 0; font-family: var(--font-ui); background: var(--paper); color: var(--ink); transition: background 0.2s, color 0.2s; }
+  body { margin: 0; font-family: var(--font-ui); background: var(--paper); color: var(--ink); }
   .center-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
-  .card { width: 100%; max-width: 420px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow-lift); padding: 32px; }
-  .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
-  .brand img { height: 32px; width: auto; border-radius: 6px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 24px; }
+  .auth-card { width: 100%; max-width: 420px; box-shadow: var(--shadow-lift); padding: 32px; }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand img { height: 30px; width: auto; border-radius: 6px; }
   .brand-name { font-weight: 700; font-size: 15px; letter-spacing: 0.01em; }
   .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; color: var(--blue); text-transform: uppercase; }
   h1 { font-size: 22px; margin: 8px 0 4px; }
+  h2 { font-size: 16px; margin: 0 0 14px; }
   .lede { color: var(--ink-soft); font-size: 14px; margin: 0 0 20px; line-height: 1.5; }
   .field { margin-bottom: 14px; }
   .field label { display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 6px; }
-  .field input { width: 100%; padding: 11px 14px; border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--paper); color: var(--ink); font-family: var(--font-ui); font-size: 14.5px; }
-  .field input:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
-  .btn-primary { width: 100%; padding: 12px; border-radius: var(--radius-sm); border: none; background: linear-gradient(135deg, var(--blue), var(--blue-deep)); color: #fff; font-family: var(--font-ui); font-weight: 600; font-size: 14.5px; cursor: pointer; transition: transform 0.15s var(--spring); }
+  .field input, .field select { width: 100%; padding: 11px 14px; border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--paper); color: var(--ink); font-family: var(--font-ui); font-size: 14.5px; }
+  .field input:focus-visible, .field select:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .btn-primary { padding: 12px 20px; border-radius: var(--radius-sm); border: none; background: linear-gradient(135deg, var(--blue), var(--blue-deep)); color: #fff; font-family: var(--font-ui); font-weight: 600; font-size: 14.5px; cursor: pointer; transition: transform 0.15s var(--spring); }
+  .btn-primary.full { width: 100%; }
   .btn-primary:hover { transform: translateY(-1px); }
   .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
   .btn-ghost { padding: 10px 16px; border-radius: var(--radius-sm); border: 1px solid var(--line); background: transparent; color: var(--ink); font-family: var(--font-ui); font-weight: 600; font-size: 13.5px; cursor: pointer; }
   .form-error { color: var(--critical); font-size: 13px; margin: 6px 0 14px; min-height: 1em; }
-  .shell { max-width: 640px; margin: 0 auto; padding: 32px 20px; }
-  .who-card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; margin-bottom: 20px; box-shadow: var(--shadow); }
-  .who-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--line-soft); font-size: 14px; }
-  .who-row:last-child { border-bottom: none; }
-  .who-row .k { color: var(--ink-faint); }
-  .who-row .v { font-family: var(--font-mono); font-weight: 600; }
-  .test-result { font-family: var(--font-mono); font-size: 12.5px; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 14px; white-space: pre-wrap; word-break: break-word; margin-top: 14px; min-height: 1.5em; }
-  .test-result.ok { border-color: #10b981; }
-  .test-result.fail { border-color: var(--critical); color: var(--critical); }
-  .toolbar { display: flex; gap: 10px; flex-wrap: wrap; }
   .hidden { display: none !important; }
   .loader { min-height: 100vh; display: flex; align-items: center; justify-content: center; color: var(--ink-faint); font-size: 13px; }
+
+  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; border-bottom: 1px solid var(--line); }
+  .who-inline { display: flex; align-items: center; gap: 14px; font-size: 13px; color: var(--ink-soft); }
+  .who-inline .name { font-weight: 700; color: var(--ink); }
+  .shell { max-width: 960px; margin: 0 auto; padding: 24px 20px 60px; }
+  .stat-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+  .stat-card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 20px; box-shadow: var(--shadow); }
+  .stat-card .value { font-family: var(--font-mono); font-size: 28px; font-weight: 700; }
+  .stat-card .label { font-size: 12px; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 2px; }
+
+  .section { margin-bottom: 24px; }
+  .toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+  .freshness-label { color: var(--ink-faint); font-size: 12.5px; margin-left: auto; }
+
+  table { width: 100%; border-collapse: separate; border-spacing: 0; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+  thead th { text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-faint); padding: 12px 16px; border-bottom: 1px solid var(--line); background: var(--line-soft); }
+  tbody td { padding: 12px 16px; font-size: 13.5px; border-bottom: 1px solid var(--line-soft); }
+  tbody tr:last-child td { border-bottom: none; }
+  td.mono { font-family: var(--font-mono); }
+  td.empty { text-align: center; padding: 32px; color: var(--ink-faint); }
+  .status-pill { display: inline-flex; padding: 4px 12px; border-radius: 20px; font-size: 11.5px; font-weight: 700; background: var(--blue-soft); color: var(--blue-deep); }
+
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--ink); color: var(--paper); padding: 12px 20px; border-radius: var(--radius-sm); font-size: 13.5px; box-shadow: var(--shadow-lift); opacity: 0; transition: all 0.25s var(--spring); pointer-events: none; z-index: 100; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.error { background: var(--critical); }
+
+  @media (max-width: 600px) {
+    .field-row { grid-template-columns: 1fr; }
+    .stat-row { grid-template-columns: 1fr; }
+    .who-inline span:not(.name) { display: none; }
+    table, thead, tbody, tr { display: block; }
+    thead { display: none; }
+    tbody tr { border-bottom: 1px solid var(--line); padding: 10px 0; }
+    tbody td { display: flex; justify-content: space-between; gap: 12px; border-bottom: none; padding: 4px 16px; }
+    tbody td::before { content: attr(data-label); font-size: 11px; font-weight: 700; color: var(--ink-faint); text-transform: uppercase; }
+  }
 </style>
 </head>
 <body>
@@ -73,38 +103,80 @@
 <div id="initialLoader" class="loader">Loading…</div>
 
 <div id="loginScreen" class="center-screen hidden">
-  <div class="card">
+  <div class="card auth-card">
     <div class="brand"><img src="https://i.postimg.cc/HxdkG3R1/CALGAS-CAPACITORS-LOGO-192x192.jpg" alt=""><span class="brand-name">CALGAS CAPACITORS</span></div>
-    <div class="eyebrow">Manufacturing Tracker</div>
+    <div class="eyebrow" style="margin-top:14px">Manufacturing Tracker</div>
     <h1>Sign in</h1>
     <p class="lede">Same account as Stock Management — sign in once, both apps recognize you.</p>
     <form id="loginForm">
       <div class="field"><label for="loginUsername">Username or email</label><input type="text" id="loginUsername" autocomplete="username" required></div>
       <div class="field"><label for="loginPassword">Password</label><input type="password" id="loginPassword" autocomplete="current-password" required></div>
       <div class="form-error" id="loginError"></div>
-      <button type="submit" class="btn-primary" id="loginSubmit">Sign in</button>
+      <button type="submit" class="btn-primary full" id="loginSubmit">Sign in</button>
     </form>
   </div>
 </div>
 
-<div id="appShell" class="shell hidden">
-  <div class="brand"><img src="https://i.postimg.cc/HxdkG3R1/CALGAS-CAPACITORS-LOGO-192x192.jpg" alt=""><span class="brand-name">CALGAS CAPACITORS</span><span class="eyebrow" style="margin-left:auto">PHASE 0</span></div>
-  <h1>Manufacturing Tracker</h1>
-  <p class="lede">Foundation check — confirms the Sheet, Apps Script, and shared login all round-trip correctly before any real module gets built.</p>
-
-  <div class="who-card">
-    <div class="who-row"><span class="k">Name</span><span class="v" id="whoName">—</span></div>
-    <div class="who-row"><span class="k">Username</span><span class="v" id="whoUsername">—</span></div>
-    <div class="who-row"><span class="k">Role</span><span class="v" id="whoRole">—</span></div>
-    <div class="who-row"><span class="k">Department</span><span class="v" id="whoDepartment">—</span></div>
+<div id="appShell" class="hidden">
+  <div class="topbar">
+    <div class="brand"><img src="https://i.postimg.cc/HxdkG3R1/CALGAS-CAPACITORS-LOGO-192x192.jpg" alt=""><span class="brand-name">Manufacturing Tracker</span></div>
+    <div class="who-inline">
+      <span class="name" id="whoName">—</span>
+      <span id="whoRoleDept">—</span>
+      <button class="btn-ghost" id="logoutBtn">Sign out</button>
+    </div>
   </div>
 
-  <div class="toolbar">
-    <button class="btn-primary" id="testConnectionBtn" style="width:auto;padding:12px 20px">Test connection</button>
-    <button class="btn-ghost" id="logoutBtn">Sign out</button>
+  <div class="shell">
+    <div class="stat-row">
+      <div class="stat-card"><div class="value" id="statPending">—</div><div class="label">Pending orders</div></div>
+      <div class="stat-card"><div class="value" id="statToday">—</div><div class="label">Placed today</div></div>
+    </div>
+
+    <div class="section card hidden" id="placeOrderCard">
+      <h2>Place order</h2>
+      <form id="orderForm">
+        <div class="field"><label for="orderCustomer">Customer</label><input type="text" id="orderCustomer" required></div>
+        <div class="field">
+          <label for="orderFg">FG item</label>
+          <input type="text" id="orderFg" list="fgOptions" placeholder="Search by code or name…" required>
+          <datalist id="fgOptions"></datalist>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="orderQty">Qty</label><input type="number" id="orderQty" min="1" step="any" required></div>
+          <div class="field"><label for="orderSource">Source</label>
+            <select id="orderSource" required>
+              <option value="">Select…</option>
+              <option value="Mail">Mail</option>
+              <option value="WhatsApp">WhatsApp</option>
+              <option value="Call">Call</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+        </div>
+        <div class="field"><label for="orderDueDate">Due date (optional)</label><input type="date" id="orderDueDate"></div>
+        <div class="form-error" id="orderError"></div>
+        <button type="submit" class="btn-primary full" id="orderSubmit">Place order</button>
+      </form>
+    </div>
+
+    <div class="section">
+      <div class="toolbar">
+        <h2 style="margin:0">Orders</h2>
+        <button class="btn-ghost" id="refreshOrdersBtn">Refresh</button>
+        <span class="freshness-label" id="ordersFreshness"></span>
+      </div>
+      <table>
+        <thead><tr>
+          <th>Order ID</th><th>Date</th><th>Customer</th><th>FG</th><th>Qty</th><th>Source</th><th>Placed by</th><th>Status</th><th>Due</th>
+        </tr></thead>
+        <tbody id="ordersTableBody"></tbody>
+      </table>
+    </div>
   </div>
-  <div id="testResult" class="test-result"></div>
 </div>
+
+<div class="toast" id="toast"></div>
 
 <script>
 // Fill in after your first deployment (Deploy > New deployment > Web App).
@@ -114,7 +186,7 @@ const MFG_API_URL = 'https://script.google.com/macros/s/AKfycbyXzZn-GV0wqsq9DwdI
 // (Deploy > New deployment, not "manage deployments") and gets a new URL.
 const STOCK_API_URL = 'https://script.google.com/macros/s/AKfycbwgMLr8mcNt402VpdDNkrrPpa0VuhwLs5xdZAtuJx9Iy_LQcKxXpxCO_mZfbCOGPn6Z/exec';
 
-const state = { session: null };
+const state = { session: null, who: null, orders: [], fgCatalog: [], ordersLastUpdated: null };
 
 // Same fetch shape as Stock Management's own api() — text/plain avoids a
 // CORS preflight, which is what makes calling a different Apps Script
@@ -145,6 +217,22 @@ function clearSession() { state.session = null; localStorage.removeItem('stock_s
 function show(id) {
   ['initialLoader', 'loginScreen', 'appShell'].forEach(function (s) { document.getElementById(s).classList.toggle('hidden', s !== id); });
 }
+function escapeHtml(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function toast(msg, isError) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = 'toast show' + (isError ? ' error' : '');
+  clearTimeout(toast._t); toast._t = setTimeout(function () { el.classList.remove('show'); }, 3500);
+}
+function timeAgo(date) {
+  if (!date) return 'never';
+  const secs = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (secs < 10) return 'just now';
+  if (secs < 60) return secs + 's ago';
+  const mins = Math.floor(secs / 60);
+  if (mins < 60) return mins + (mins === 1 ? ' min ago' : ' mins ago');
+  const hrs = Math.floor(mins / 60);
+  return hrs + (hrs === 1 ? ' hr ago' : ' hrs ago');
+}
 
 async function boot() {
   if (MFG_API_URL.indexOf('PASTE_MFG_TRACKER') === 0) {
@@ -161,11 +249,70 @@ async function boot() {
 
 async function enterApp() {
   const who = await mfgApi('whoami');
+  state.who = who;
   document.getElementById('whoName').textContent = who.name;
-  document.getElementById('whoUsername').textContent = who.username;
-  document.getElementById('whoRole').textContent = who.role + (who.isAdmin ? ' (full access)' : '');
-  document.getElementById('whoDepartment').textContent = who.department || '—';
+  document.getElementById('whoRoleDept').textContent = who.role + ' · ' + (who.department || '—');
+  document.getElementById('placeOrderCard').classList.toggle('hidden', !who.permissions.placeOrder);
   show('appShell');
+
+  if (who.permissions.placeOrder) loadFGCatalog().catch(function (err) { console.error('FG catalog load failed', err); });
+  await loadOrders();
+  setInterval(function () { if (document.visibilityState === 'visible') loadOrders().catch(function (err) { console.error('Background order refresh failed', err); }); }, 45000);
+  setInterval(function () { updateFreshnessLabel(); }, 20000);
+}
+
+async function loadFGCatalog() {
+  state.fgCatalog = await mfgApi('getFGCatalog');
+  const dl = document.getElementById('fgOptions');
+  dl.innerHTML = state.fgCatalog.map(function (f) { return '<option value="' + escapeHtml(f.code + ' — ' + f.name) + '">'; }).join('');
+}
+
+function resolveFgCode(typed) {
+  const code = typed.split(' — ')[0].trim();
+  const match = state.fgCatalog.filter(function (f) { return f.code === code; })[0];
+  return match ? match.code : null;
+}
+
+async function loadOrders() {
+  state.orders = await mfgApi('getOrders');
+  state.ordersLastUpdated = new Date();
+  renderOrders();
+  updateFreshnessLabel();
+}
+
+function updateFreshnessLabel() {
+  const el = document.getElementById('ordersFreshness');
+  if (el) el.textContent = 'Updated ' + timeAgo(state.ordersLastUpdated);
+}
+
+function renderOrders() {
+  const orders = state.orders;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const pending = orders.filter(function (o) { return o.Status === 'Pending'; }).length;
+  const placedToday = orders.filter(function (o) { return new Date(o.Date).getTime() >= today.getTime(); }).length;
+  document.getElementById('statPending').textContent = pending;
+  document.getElementById('statToday').textContent = placedToday;
+
+  const body = document.getElementById('ordersTableBody');
+  if (orders.length === 0) {
+    body.innerHTML = '<tr><td colspan="9" class="empty">No orders yet.</td></tr>';
+    return;
+  }
+  body.innerHTML = orders.map(function (o) {
+    const date = o.Date ? new Date(o.Date).toLocaleDateString() : '—';
+    const due = o.DueDate ? new Date(o.DueDate).toLocaleDateString() : '—';
+    return '<tr>' +
+      '<td class="mono" data-label="Order ID">' + escapeHtml(o.OrderID) + '</td>' +
+      '<td data-label="Date">' + date + '</td>' +
+      '<td data-label="Customer">' + escapeHtml(o.Customer) + '</td>' +
+      '<td data-label="FG">' + escapeHtml(o.FGName || o.FGCode) + '</td>' +
+      '<td class="mono" data-label="Qty">' + escapeHtml(o.Qty) + '</td>' +
+      '<td data-label="Source">' + escapeHtml(o.Source) + '</td>' +
+      '<td data-label="Placed by">' + escapeHtml(o.PlacedBy) + '</td>' +
+      '<td data-label="Status"><span class="status-pill">' + escapeHtml(o.Status) + '</span></td>' +
+      '<td data-label="Due">' + due + '</td>' +
+      '</tr>';
+  }).join('');
 }
 
 document.getElementById('loginForm').addEventListener('submit', async function (e) {
@@ -190,27 +337,42 @@ document.getElementById('loginForm').addEventListener('submit', async function (
 
 document.getElementById('logoutBtn').addEventListener('click', function () {
   clearSession();
-  show('loginScreen');
+  location.reload();
 });
 
-document.getElementById('testConnectionBtn').addEventListener('click', async function () {
-  const btn = this;
-  const resultEl = document.getElementById('testResult');
-  resultEl.className = 'test-result';
-  btn.disabled = true; btn.textContent = 'Testing…';
+document.getElementById('orderForm').addEventListener('submit', async function (e) {
+  e.preventDefault();
+  const btn = document.getElementById('orderSubmit');
+  const errEl = document.getElementById('orderError');
+  errEl.textContent = '';
+
+  const typedFg = document.getElementById('orderFg').value.trim();
+  const fgCode = resolveFgCode(typedFg);
+  if (!fgCode) { errEl.textContent = 'Pick an FG item from the list.'; return; }
+
+  btn.disabled = true; btn.textContent = 'Placing…';
   try {
-    const ping = await mfgApi('ping');
-    const who = await mfgApi('whoami');
-    resultEl.className = 'test-result ok';
-    resultEl.textContent =
-      '✓ ping — Web App reachable\n  ' + JSON.stringify(ping) + '\n\n' +
-      '✓ whoami — shared session validated against Stock Management\n  ' + JSON.stringify(who);
+    await mfgApi('placeOrder', {
+      customer: document.getElementById('orderCustomer').value.trim(),
+      fgCode: fgCode,
+      qty: document.getElementById('orderQty').value,
+      source: document.getElementById('orderSource').value,
+      dueDate: document.getElementById('orderDueDate').value || undefined
+    });
+    document.getElementById('orderForm').reset();
+    toast('Order placed.');
+    await loadOrders();
   } catch (err) {
-    resultEl.className = 'test-result fail';
-    resultEl.textContent = '✗ ' + err.message;
+    errEl.textContent = err.message;
   } finally {
-    btn.disabled = false; btn.textContent = 'Test connection';
+    btn.disabled = false; btn.textContent = 'Place order';
   }
+});
+
+document.getElementById('refreshOrdersBtn').addEventListener('click', async function () {
+  const btn = this; btn.disabled = true; btn.textContent = 'Refreshing…';
+  try { await loadOrders(); toast('Refreshed.'); } catch (err) { toast(err.message, true); }
+  finally { btn.disabled = false; btn.textContent = 'Refresh'; }
 });
 
 // Register Service Worker for PWA if supported
