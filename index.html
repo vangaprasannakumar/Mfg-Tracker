@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Capacitor Manufacturing Tracker</title>
 <meta name="theme-color" content="#f8fafc" id="metaThemeColor">
-<meta name="app-version" content="0.2.0-phase1">
+<meta name="app-version" content="0.3.0-phase2">
 <link rel="manifest" href="./manifest.json">
 <link rel="icon" href="https://i.postimg.cc/HxdkG3R1/CALGAS-CAPACITORS-LOGO-192x192.jpg">
 <link rel="apple-touch-icon" href="https://i.postimg.cc/76wZvXdD/CALGAS-CAPACITORS-LOGO-512x512.jpg">
@@ -65,7 +65,7 @@
   .who-inline { display: flex; align-items: center; gap: 14px; font-size: 13px; color: var(--ink-soft); }
   .who-inline .name { font-weight: 700; color: var(--ink); }
   .shell { max-width: 960px; margin: 0 auto; padding: 24px 20px 60px; }
-  .stat-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+  .stat-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 20px; }
   .stat-card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 20px; box-shadow: var(--shadow); }
   .stat-card .value { font-family: var(--font-mono); font-size: 28px; font-weight: 700; }
   .stat-card .label { font-size: 12px; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 2px; }
@@ -81,6 +81,13 @@
   td.mono { font-family: var(--font-mono); }
   td.empty { text-align: center; padding: 32px; color: var(--ink-faint); }
   .status-pill { display: inline-flex; padding: 4px 12px; border-radius: 20px; font-size: 11.5px; font-weight: 700; background: var(--blue-soft); color: var(--blue-deep); }
+  .status-pill.st-requested { background: #fef3c7; color: #92400e; }
+  .status-pill.st-approved { background: var(--blue-soft); color: var(--blue-deep); }
+  .status-pill.st-issued { background: #ede9fe; color: #5b21b6; }
+  .status-pill.st-received { background: #d1fae5; color: #065f46; }
+  .btn-small { padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); font-family: var(--font-ui); font-weight: 600; font-size: 12px; cursor: pointer; }
+  .btn-small:hover { background: var(--line-soft); }
+  .btn-small:disabled { opacity: 0.5; cursor: not-allowed; }
 
   .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--ink); color: var(--paper); padding: 12px 20px; border-radius: var(--radius-sm); font-size: 13.5px; box-shadow: var(--shadow-lift); opacity: 0; transition: all 0.25s var(--spring); pointer-events: none; z-index: 100; }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -131,6 +138,7 @@
     <div class="stat-row">
       <div class="stat-card"><div class="value" id="statPending">—</div><div class="label">Pending orders</div></div>
       <div class="stat-card"><div class="value" id="statToday">—</div><div class="label">Placed today</div></div>
+      <div class="stat-card"><div class="value" id="statRmOpen">—</div><div class="label">Open RM requests</div></div>
     </div>
 
     <div class="section card hidden" id="placeOrderCard">
@@ -173,6 +181,37 @@
         <tbody id="ordersTableBody"></tbody>
       </table>
     </div>
+
+    <div class="section card hidden" id="requestRmCard">
+      <h2>Request RM</h2>
+      <form id="rmRequestForm">
+        <div class="field">
+          <label for="rmReqItem">RM item</label>
+          <input type="text" id="rmReqItem" list="rmOptions" placeholder="Search by code or name…" required>
+          <datalist id="rmOptions"></datalist>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="rmReqQty">Qty</label><input type="number" id="rmReqQty" min="1" step="any" required></div>
+          <div class="field"><label for="rmReqOrderRef">Order ref (optional)</label><input type="text" id="rmReqOrderRef" placeholder="e.g. ORD-00003"></div>
+        </div>
+        <div class="form-error" id="rmRequestError"></div>
+        <button type="submit" class="btn-primary full" id="rmRequestSubmit">Submit request</button>
+      </form>
+    </div>
+
+    <div class="section">
+      <div class="toolbar">
+        <h2 style="margin:0">RM Requests</h2>
+        <button class="btn-ghost" id="refreshRmBtn">Refresh</button>
+        <span class="freshness-label" id="rmFreshness"></span>
+      </div>
+      <table>
+        <thead><tr>
+          <th>Req ID</th><th>Date</th><th>Item</th><th>Qty</th><th>From</th><th>Status</th><th>Requested by</th><th></th>
+        </tr></thead>
+        <tbody id="rmTableBody"></tbody>
+      </table>
+    </div>
   </div>
 </div>
 
@@ -186,7 +225,7 @@ const MFG_API_URL = 'https://script.google.com/macros/s/AKfycbyXzZn-GV0wqsq9DwdI
 // (Deploy > New deployment, not "manage deployments") and gets a new URL.
 const STOCK_API_URL = 'https://script.google.com/macros/s/AKfycbwgMLr8mcNt402VpdDNkrrPpa0VuhwLs5xdZAtuJx9Iy_LQcKxXpxCO_mZfbCOGPn6Z/exec';
 
-const state = { session: null, who: null, orders: [], fgCatalog: [], ordersLastUpdated: null };
+const state = { session: null, who: null, orders: [], fgCatalog: [], ordersLastUpdated: null, rmRequests: [], rmCatalog: [], rmLastUpdated: null };
 
 // Same fetch shape as Stock Management's own api() — text/plain avoids a
 // CORS preflight, which is what makes calling a different Apps Script
@@ -253,12 +292,18 @@ async function enterApp() {
   document.getElementById('whoName').textContent = who.name;
   document.getElementById('whoRoleDept').textContent = who.role + ' · ' + (who.department || '—');
   document.getElementById('placeOrderCard').classList.toggle('hidden', !who.permissions.placeOrder);
+  document.getElementById('requestRmCard').classList.toggle('hidden', !who.permissions.requestRM);
   show('appShell');
 
   if (who.permissions.placeOrder) loadFGCatalog().catch(function (err) { console.error('FG catalog load failed', err); });
-  await loadOrders();
-  setInterval(function () { if (document.visibilityState === 'visible') loadOrders().catch(function (err) { console.error('Background order refresh failed', err); }); }, 45000);
-  setInterval(function () { updateFreshnessLabel(); }, 20000);
+  if (who.permissions.requestRM) loadRMCatalog().catch(function (err) { console.error('RM catalog load failed', err); });
+  await Promise.all([loadOrders(), loadRMRequests()]);
+  setInterval(function () {
+    if (document.visibilityState !== 'visible') return;
+    loadOrders().catch(function (err) { console.error('Background order refresh failed', err); });
+    loadRMRequests().catch(function (err) { console.error('Background RM refresh failed', err); });
+  }, 45000);
+  setInterval(updateFreshnessLabels, 20000);
 }
 
 async function loadFGCatalog() {
@@ -273,16 +318,37 @@ function resolveFgCode(typed) {
   return match ? match.code : null;
 }
 
+async function loadRMCatalog() {
+  state.rmCatalog = await mfgApi('getRMCatalog');
+  const dl = document.getElementById('rmOptions');
+  dl.innerHTML = state.rmCatalog.map(function (r) { return '<option value="' + escapeHtml(r.code + ' — ' + r.name) + '">'; }).join('');
+}
+
+function resolveRmCode(typed) {
+  const code = typed.split(' — ')[0].trim();
+  const match = state.rmCatalog.filter(function (r) { return r.code === code; })[0];
+  return match ? match.code : null;
+}
+
 async function loadOrders() {
   state.orders = await mfgApi('getOrders');
   state.ordersLastUpdated = new Date();
   renderOrders();
-  updateFreshnessLabel();
+  updateFreshnessLabels();
 }
 
-function updateFreshnessLabel() {
-  const el = document.getElementById('ordersFreshness');
-  if (el) el.textContent = 'Updated ' + timeAgo(state.ordersLastUpdated);
+async function loadRMRequests() {
+  state.rmRequests = await mfgApi('getRMRequests');
+  state.rmLastUpdated = new Date();
+  renderRMRequests();
+  updateFreshnessLabels();
+}
+
+function updateFreshnessLabels() {
+  const ordersEl = document.getElementById('ordersFreshness');
+  if (ordersEl) ordersEl.textContent = 'Updated ' + timeAgo(state.ordersLastUpdated);
+  const rmEl = document.getElementById('rmFreshness');
+  if (rmEl) rmEl.textContent = 'Updated ' + timeAgo(state.rmLastUpdated);
 }
 
 function renderOrders() {
@@ -311,6 +377,49 @@ function renderOrders() {
       '<td data-label="Placed by">' + escapeHtml(o.PlacedBy) + '</td>' +
       '<td data-label="Status"><span class="status-pill">' + escapeHtml(o.Status) + '</span></td>' +
       '<td data-label="Due">' + due + '</td>' +
+      '</tr>';
+  }).join('');
+}
+
+function statusPillClass(status) { return 'st-' + String(status || '').toLowerCase(); }
+
+const RM_ACTION_LABELS = { approveRM: 'Approved', issueRM: 'Issued', receiveRM: 'Receipt confirmed' };
+
+function renderRMRequests() {
+  const requests = state.rmRequests;
+  const open = requests.filter(function (r) { return r.Status !== 'Received'; }).length;
+  document.getElementById('statRmOpen').textContent = open;
+
+  const body = document.getElementById('rmTableBody');
+  if (requests.length === 0) {
+    body.innerHTML = '<tr><td colspan="8" class="empty">No RM requests yet.</td></tr>';
+    return;
+  }
+  const perms = state.who.permissions;
+  const myDept = state.who.department;
+  body.innerHTML = requests.map(function (r) {
+    const date = r.Date ? new Date(r.Date).toLocaleDateString() : '—';
+    // Only one of these can ever be true for a given row's status, so the
+    // viewer sees exactly the one action that applies to them right now —
+    // Approve/Issue for Store, Confirm receipt only for the requesting
+    // department (or Admin), nothing at all for anyone just watching.
+    var action = '';
+    if (perms.approveIssueRM && r.Status === 'Requested') {
+      action = '<button class="btn-small" data-action="approveRM" data-reqid="' + escapeHtml(r.ReqID) + '">Approve</button>';
+    } else if (perms.approveIssueRM && r.Status === 'Approved') {
+      action = '<button class="btn-small" data-action="issueRM" data-reqid="' + escapeHtml(r.ReqID) + '">Issue</button>';
+    } else if (r.Status === 'Issued' && (r.FromDept === myDept || state.who.isAdmin)) {
+      action = '<button class="btn-small" data-action="receiveRM" data-reqid="' + escapeHtml(r.ReqID) + '">Confirm receipt</button>';
+    }
+    return '<tr>' +
+      '<td class="mono" data-label="Req ID">' + escapeHtml(r.ReqID) + '</td>' +
+      '<td data-label="Date">' + date + '</td>' +
+      '<td data-label="Item">' + escapeHtml(r.ItemName || r.ItemCode) + '</td>' +
+      '<td class="mono" data-label="Qty">' + escapeHtml(r.Qty) + '</td>' +
+      '<td data-label="From">' + escapeHtml(r.FromDept) + '</td>' +
+      '<td data-label="Status"><span class="status-pill ' + statusPillClass(r.Status) + '">' + escapeHtml(r.Status) + '</span></td>' +
+      '<td data-label="Requested by">' + escapeHtml(r.RequestedBy) + '</td>' +
+      '<td data-label="">' + action + '</td>' +
       '</tr>';
   }).join('');
 }
@@ -373,6 +482,59 @@ document.getElementById('refreshOrdersBtn').addEventListener('click', async func
   const btn = this; btn.disabled = true; btn.textContent = 'Refreshing…';
   try { await loadOrders(); toast('Refreshed.'); } catch (err) { toast(err.message, true); }
   finally { btn.disabled = false; btn.textContent = 'Refresh'; }
+});
+
+document.getElementById('rmRequestForm').addEventListener('submit', async function (e) {
+  e.preventDefault();
+  const btn = document.getElementById('rmRequestSubmit');
+  const errEl = document.getElementById('rmRequestError');
+  errEl.textContent = '';
+
+  const typedItem = document.getElementById('rmReqItem').value.trim();
+  const itemCode = resolveRmCode(typedItem);
+  if (!itemCode) { errEl.textContent = 'Pick an RM item from the list.'; return; }
+
+  btn.disabled = true; btn.textContent = 'Submitting…';
+  try {
+    await mfgApi('requestRM', {
+      itemCode: itemCode,
+      qty: document.getElementById('rmReqQty').value,
+      orderRef: document.getElementById('rmReqOrderRef').value.trim() || undefined
+    });
+    document.getElementById('rmRequestForm').reset();
+    toast('Request submitted.');
+    await loadRMRequests();
+  } catch (err) {
+    errEl.textContent = err.message;
+  } finally {
+    btn.disabled = false; btn.textContent = 'Submit request';
+  }
+});
+
+document.getElementById('refreshRmBtn').addEventListener('click', async function () {
+  const btn = this; btn.disabled = true; btn.textContent = 'Refreshing…';
+  try { await loadRMRequests(); toast('Refreshed.'); } catch (err) { toast(err.message, true); }
+  finally { btn.disabled = false; btn.textContent = 'Refresh'; }
+});
+
+// One delegated handler for Approve/Issue/Confirm receipt — the buttons
+// are rebuilt on every render, so binding to the table body once instead
+// of per-button means new rows work without re-wiring anything.
+document.getElementById('rmTableBody').addEventListener('click', async function (e) {
+  const btn = e.target.closest('button[data-action]');
+  if (!btn) return;
+  const action = btn.dataset.action;
+  const reqId = btn.dataset.reqid;
+  const originalText = btn.textContent;
+  btn.disabled = true; btn.textContent = '…';
+  try {
+    await mfgApi(action, { reqId: reqId });
+    toast(RM_ACTION_LABELS[action] + ' — ' + reqId);
+    await loadRMRequests();
+  } catch (err) {
+    toast(err.message, true);
+    btn.disabled = false; btn.textContent = originalText;
+  }
 });
 
 // Register Service Worker for PWA if supported
